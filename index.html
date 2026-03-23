@@ -5,19 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Générateur de Cartes Bastos</title>
     
-    <!-- 1. Chargement de Tailwind CSS (SANS crossorigin pour ne pas casser le design) -->
+    <!-- 1. Chargement de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. Chargement de la police futuriste Rajdhani AVEC autorisation CORS pour html-to-image -->
+    <!-- 2. Chargement de la police futuriste Rajdhani avec sécurité CORS pour html-to-image -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
     
     <!-- 3. Chargement des icônes Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- 4. html-to-image (Moteur de rendu SVG au pixel près) -->
+    <!-- 4. MOTEUR SVG PARFAIT (html-to-image) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
-    <!-- 5. Chargement de Cropper.js AVEC autorisation CORS -->
+    <!-- 5. Chargement de Cropper.js avec sécurité CORS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet" crossorigin="anonymous">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
@@ -70,17 +72,9 @@
         .hidden-mode { display: none !important; }
 
         /* --- Personnalisation de Cropper.js --- */
-        .cropper-modal {
-            background-color: #020617 !important;
-            opacity: 0.85 !important; 
-        }
-        .cropper-view-box {
-            border-radius: 0.75rem; 
-            outline: 2px solid #5381ED !important; 
-        }
-        .cropper-line, .cropper-point, .cropper-dashed, .cropper-center {
-            display: none !important; 
-        }
+        .cropper-modal { background-color: #020617 !important; opacity: 0.85 !important; }
+        .cropper-view-box { border-radius: 0.75rem; outline: 2px solid #5381ED !important; }
+        .cropper-line, .cropper-point, .cropper-dashed, .cropper-center { display: none !important; }
     </style>
 </head>
 <body class="min-h-screen bg-slate-900 p-4 font-sans text-gray-100 transition-colors duration-300">
@@ -288,7 +282,6 @@
 
                         <!-- HEADER -->
                         <div class="flex gap-2 h-14 shrink-0 transition-all duration-300">
-                            <!-- Nom + Picto fusionnés -->
                             <div id="preview-name-container" 
                                  class="bg-slate-900 rounded-xl w-full flex-1 shadow-[0px_4px_10px_rgba(0,0,0,0.3)] border-b-2 border-white/20 flex items-center justify-center px-4 transition-all duration-300">
                                 <span id="preview-name" class="uppercase text-3xl font-bold text-center text-slate-100 overflow-hidden whitespace-nowrap truncate">NOM DE LA CARTE</span>
@@ -300,7 +293,8 @@
 
                         <!-- CENTRE: Image -->
                         <div class="flex-grow bg-slate-300 rounded-xl relative overflow-hidden shadow-[inset_0px_0px_20px_rgba(0,0,0,0.5)] border-2 border-slate-800 flex items-center justify-center tech-border">
-                            <img id="preview-image" src="" class="w-full h-full object-cover object-center hidden opacity-90 sepia-[.2] contrast-125 grayscale-[.2]">
+                            <!-- Image avec base64 de pixel transparent au lieu d'un src="" vide -->
+                            <img id="preview-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="w-full h-full object-cover object-center hidden opacity-90 sepia-[.2] contrast-125 grayscale-[.2]">
                             
                             <div id="preview-placeholder" class="text-center text-slate-500 bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl backdrop-blur-sm">
                                 <i data-lucide="image" class="w-12 h-12 mb-2 mx-auto text-slate-400"></i>
@@ -326,16 +320,8 @@
                                 <div id="label-price" class="text-[10px] font-bold w-full text-center truncate text-slate-400">PRIX EN BASTOS</div>
                                 <div class="flex items-center justify-center gap-1 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">
                                     <span id="preview-price" class="text-3xl font-bold leading-none truncate">5</span>
-                                    <!-- Icône Bastos/Munition personnalisée -->
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M9 10v10" />
-                                        <path d="M15 10v10" />
-                                        <path d="M8 20h8" />
-                                        <path d="M9 22h6" />
-                                        <path d="M9 20v2" />
-                                        <path d="M15 20v2" />
-                                        <path d="M9 10c0-4 3-8 3-8s3 4 3 8" />
-                                        <path d="M8 10h8" />
+                                        <path d="M9 10v10" /><path d="M15 10v10" /><path d="M8 20h8" /><path d="M9 22h6" /><path d="M9 20v2" /><path d="M15 20v2" /><path d="M9 10c0-4 3-8 3-8s3 4 3 8" /><path d="M8 10h8" />
                                     </svg>
                                 </div>
                             </div>
@@ -363,7 +349,8 @@
             <p class="text-sm text-slate-400 -mt-2">Utilisez la molette pour zoomer, et glissez pour déplacer l'image dans le cadre.</p>
             
             <div class="w-full h-96 bg-slate-950 rounded-xl overflow-hidden border border-slate-700 relative">
-                <img id="crop-image-target" class="max-w-full block" src="">
+                <!-- Image cible avec un pixel transparent en attendant l'upload réel -->
+                <img id="crop-image-target" class="max-w-full block" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
             </div>
             
             <div class="flex gap-4 justify-end mt-2">
@@ -500,13 +487,13 @@
             const iconContainer = document.getElementById('preview-icon-container');
             if (iconName === 'two-hands') {
                 iconContainer.innerHTML = `
-                    <div class="flex items-center justify-center gap-0.5">
+                    <div class="flex items-center justify-center gap-0.5 mt-1">
                         <i data-lucide="hand" class="w-6 h-6 opacity-80 text-white -scale-x-100"></i>
                         <i data-lucide="hand" class="w-6 h-6 opacity-80 text-white"></i>
                     </div>
                 `;
             } else {
-                iconContainer.innerHTML = `<i data-lucide="${iconName}" class="w-7 h-7 opacity-80 text-white"></i>`;
+                iconContainer.innerHTML = `<i data-lucide="${iconName}" class="w-6 h-6 opacity-80 text-white"></i>`;
             }
             lucide.createIcons({ root: iconContainer });
 
@@ -615,26 +602,26 @@
                 document.getElementById('loot-desc').value = "DESCRIPTIF DE LA CARTE";
                 document.getElementById('loot-power').value = "+1";
                 document.getElementById('loot-price').value = "5";
-                document.getElementById('loot-image').value = "";
             } else if (currentMode === 'aventure') {
                 document.getElementById('adv-name').value = "NOM DE L'AVENTURE";
                 document.getElementById('adv-type').selectedIndex = 0;
                 document.getElementById('adv-desc').value = "DESCRIPTIF DE L'AVENTURE";
                 document.getElementById('adv-power').value = "PUISSANCE";
                 document.getElementById('adv-price').value = "BUTIN";
-                document.getElementById('adv-image').value = "";
             } else if (currentMode === 'personnage') {
                 document.getElementById('perso-name').value = "NOM DU PERSONNAGE";
                 document.getElementById('perso-desc').value = "HISTOIRE DU PERSONNAGE...";
-                document.getElementById('perso-image').value = "";
             }
             updateCardContent(currentMode);
-            document.getElementById('preview-image').src = "";
-            document.getElementById('preview-image').classList.add('hidden');
+            
+            const img = document.getElementById('preview-image');
+            // Réinitialisation de l'image avec un pixel transparent en Base64
+            img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            img.classList.add('hidden');
             document.getElementById('preview-placeholder').classList.remove('hidden');
         }
 
-        // === 8. Download (Restauration du moteur DOM to Image html-to-image) ===
+        // === 8. Download (html-to-image) ===
         async function downloadCard() {
             const btn = document.getElementById('btn-download');
             const originalContent = btn.innerHTML;
@@ -643,13 +630,12 @@
             btn.classList.add('opacity-75', 'cursor-not-allowed');
 
             try {
-                await document.fonts.ready;
                 const element = document.getElementById('card-preview');
 
-                // Moteur SVG qui garantit la prise en charge parfaite du text-justify et des drop-shadows
                 const dataUrl = await htmlToImage.toPng(element, { 
                     quality: 1.0,
                     pixelRatio: 2, 
+                    skipAutoScale: true,
                     style: { transform: 'none' } 
                 });
                 
@@ -659,7 +645,7 @@
                 link.click();
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la génération. Veuillez vérifier la console.");
+                alert("Erreur lors de la génération. Vérifiez la console.");
             } finally {
                 btn.innerHTML = originalContent;
                 btn.disabled = false;
