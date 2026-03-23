@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Cartes Bastos</title>
+    
+    <!-- 1. Chargement de Tailwind CSS (SANS crossorigin pour éviter le crash) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Chargement de la police futuriste Rajdhani -->
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- 3. Chargement des icônes Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- 4. Retour à html2canvas (Gère mieux les CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- 5. Chargement de Cropper.js pour le redimensionnement d'image -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <style>
+        /* Style personnalisé pour la police de la carte */
+        .font-card { font-family: 'Rajdhani', sans-serif; }
+        
+        /* Masquer la scrollbar si nécessaire */
+        textarea { resize: none; }
+
+        /* Textures Futuristes et Papier */
+        .scanlines {
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+        }
+        .crumpled-paper {
+            /* Véritable texture de papier froissé (Hébergée sur Unsplash, compatible CORS) */
+            background-image: url('https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=420&q=80');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.45; /* Permet de voir la couleur de la carte à travers */
+            mix-blend-mode: multiply; /* Assombrit les creux du papier pour plus de réalisme */
+        }
+        .tech-border {
+            background: 
+                linear-gradient(90deg, #1e293b 50%, transparent 50%),
+                linear-gradient(90deg, #1e293b 50%, transparent 50%),
+                linear-gradient(0deg, #1e293b 50%, transparent 50%),
+                linear-gradient(0deg, #1e293b 50%, transparent 50%);
+            background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+            background-size: 16px 4px, 16px 4px, 4px 16px, 4px 16px;
+            background-position: 0 0, 0 100%, 0 0, 100% 0;
+        }
+
+        /* Animation de chargement */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Utilitaires pour masquer/afficher */
+        .hidden-mode { display: none !important; }
+
+        /* --- Personnalisation de Cropper.js (Masque sombre et cadre fixe) --- */
+        .cropper-modal {
+            background-color: #020617 !important; /* Slate 950 */
+            opacity: 0.85 !important; /* Contour opaque sombre */
+        }
+        .cropper-view-box {
+            border-radius: 0.75rem; /* Arrondi correspondant à la vignette de la carte */
+            outline: 2px solid #5381ED !important; /* Bordure colorée pour bien voir le cadre */
+        }
+        .cropper-line, .cropper-point, .cropper-dashed, .cropper-center {
+            display: none !important; /* Masquer tous les outils de redimensionnement du cadre */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-900 p-4 font-sans text-gray-100 transition-colors duration-300">
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- === COLONNE GAUCHE : FORMULAIRE === -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- SÉLECTEUR DE MODE -->
+            <div class="bg-slate-800 p-2 rounded-xl border border-slate-700 flex gap-2">
+                <button onclick="switchMode('loot')" id="tab-loot" class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all bg-blue-600 text-white shadow-md">
+                    LOOT
+                </button>
+                <button onclick="switchMode('aventure')" id="tab-aventure" class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white">
+                    AVENTURE
+                </button>
+                <button onclick="switchMode('personnage')" id="tab-personnage" class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white">
+                    PERSONNAGE
+                </button>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-700">
+                
+                <!-- ENTÊTE -->
+                <h1 class="text-2xl font-bold mb-6 flex items-center gap-2 text-white">
+                    <i data-lucide="edit-3" class="w-6 h-6 text-blue-500"></i>
+                    <span id="editor-title">Éditeur LOOT</span>
+                </h1>
+
+                <!-- FORMULAIRE LOOT -->
+                <div id="form-loot" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Nom</label>
+                            <input type="text" id="loot-name" value="NOM DE LA CARTE" 
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white transition-all">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Détail (Type)</label>
+                            <select id="loot-detail" onchange="updateLootType()"
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white transition-all cursor-pointer">
+                                <!-- Modification ici : value = nom de l'icone lucide -->
+                                <option value="hand" data-color="#5381ED" data-layout="standard">🖐 Main</option>
+                                <option value="two-hands" data-color="#5381ED" data-layout="standard">🖐🖐 2 Mains</option>
+                                <option value="hard-hat" data-color="#5381ED" data-layout="standard">🪖 Tête</option>
+                                <option value="shirt" data-color="#5381ED" data-layout="standard">🦺 Torse</option>
+                                <option value="footprints" data-color="#5381ED" data-layout="standard">🥾 Pieds</option>
+                                <option value="backpack" data-color="#5381ED" data-layout="standard">🎒 Sac</option>
+                                <option value="hard-drive" data-color="#5381ED" data-layout="standard">💾 Data</option>
+                                <option value="flask-conical" data-color="#5381ED" data-layout="standard">🧪 Conso</option>
+                                <option value="package" data-color="#5381ED" data-layout="standard">📦 Bric à brac</option>
+                                <option disabled>------</option>
+                                <option value="skull" data-color="#33CCF5" data-layout="fourberie">☠️ FOURBERIE</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Image Upload Loot -->
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Image</label>
+                        <div class="relative border-2 border-dashed border-slate-600 rounded-lg p-4 hover:bg-slate-700 hover:border-blue-500 transition-colors text-center cursor-pointer group">
+                            <input type="file" id="loot-image" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div class="flex flex-col items-center justify-center text-slate-400 group-hover:text-white">
+                                <i data-lucide="upload" class="w-8 h-8 mb-2"></i>
+                                <span class="text-sm font-medium">Ajouter image</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Description</label>
+                        <textarea id="loot-desc" rows="4" 
+                            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white">DESCRIPTIF DE LA CARTE</textarea>
+                    </div>
+
+                    <!-- Ce bloc est masqué en mode FOURBERIE -->
+                    <div id="loot-stats-inputs" class="grid grid-cols-2 gap-4 transition-all duration-300">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Valeur Bonus</label>
+                            <input type="text" id="loot-power" value="+1" 
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Valeur Prix</label>
+                            <input type="text" id="loot-price" value="5" 
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMULAIRE AVENTURE -->
+                <div id="form-aventure" class="hidden-mode space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Nom</label>
+                            <input type="text" id="adv-name" value="NOM DE L'AVENTURE" 
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white transition-all">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Type d'Aventure</label>
+                            <select id="adv-type" onchange="updateAdventureColor()"
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white transition-all cursor-pointer">
+                                <option value="QUÊTE" data-color="#09660E">QUÊTE</option>
+                                <option value="RENCONTRE" data-color="#FF7300">RENCONTRE</option>
+                                <option value="ENVIRONNEMENT" data-color="#46667A">ENVIRONNEMENT</option>
+                                <option value="CREATURES" data-color="#7B147D">CREATURES</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Image Upload Aventure -->
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Image</label>
+                        <div class="relative border-2 border-dashed border-slate-600 rounded-lg p-4 hover:bg-slate-700 hover:border-green-500 transition-colors text-center cursor-pointer group">
+                            <input type="file" id="adv-image" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div class="flex flex-col items-center justify-center text-slate-400 group-hover:text-white">
+                                <i data-lucide="upload" class="w-8 h-8 mb-2"></i>
+                                <span class="text-sm font-medium">Ajouter image</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Description</label>
+                        <textarea id="adv-desc" rows="4" 
+                            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white">DESCRIPTIF DE L'AVENTURE</textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Power</label>
+                            <input type="text" id="adv-power" value="PUISSANCE" 
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Récompenses</label>
+                            <input type="text" id="adv-price" value="BUTIN" 
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMULAIRE PERSONNAGE -->
+                <div id="form-personnage" class="hidden-mode space-y-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Nom du Personnage</label>
+                        <input type="text" id="perso-name" value="NOM DU PERSONNAGE" 
+                            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-white transition-all">
+                    </div>
+
+                    <!-- Image Upload Personnage -->
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Image</label>
+                        <div class="relative border-2 border-dashed border-slate-600 rounded-lg p-4 hover:bg-slate-700 hover:border-red-500 transition-colors text-center cursor-pointer group">
+                            <input type="file" id="perso-image" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div class="flex flex-col items-center justify-center text-slate-400 group-hover:text-white">
+                                <i data-lucide="upload" class="w-8 h-8 mb-2"></i>
+                                <span class="text-sm font-medium">Ajouter image</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Description / Biographie</label>
+                        <textarea id="perso-desc" rows="6" 
+                            class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-white">HISTOIRE DU PERSONNAGE...</textarea>
+                    </div>
+                </div>
+
+                <!-- Actions Buttons -->
+                <div id="actions-panel" class="mt-8 flex gap-3">
+                    <button id="btn-download" onclick="downloadCard()" 
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 border border-slate-600">
+                        <i data-lucide="download" class="w-5 h-5"></i>
+                        <span>PRINT (PNG)</span>
+                    </button>
+                    <button onclick="resetForm()" 
+                        class="px-4 py-3 bg-slate-800 border border-slate-600 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors" title="Réinitialiser">
+                        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- === COLONNE DROITE : PREVIEW === -->
+        <div class="lg:col-span-7 flex items-center justify-center bg-slate-800 rounded-xl p-8 border border-slate-700 overflow-hidden relative">
+            
+            <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 20px 20px;"></div>
+
+            <!-- CADRE DE LA CARTE -->
+            <div id="card-preview-container">
+                <div id="card-preview" 
+                     class="relative shadow-2xl overflow-hidden flex flex-col font-card box-border transform transition-all duration-300 rounded-2xl"
+                     style="width: 420px; height: 680px; background-color: #5381ED; border: 4px solid #0f172a; padding: 16px;">
+                    
+                    <!-- CALQUES DE TEXTURE (Papier froissé + Scanlines) -->
+                    <div class="absolute inset-0 crumpled-paper pointer-events-none z-10 rounded-xl"></div>
+                    <div class="absolute inset-0 scanlines pointer-events-none z-20 opacity-60 rounded-xl"></div>
+                    
+                    <!-- ÉLÉMENTS HUD FUTURISTES -->
+                    <!-- Mise à jour du texte système en haut à droite -->
+                    <div id="preview-sys-text" class="absolute top-1 right-3 text-[10px] font-bold text-black/60 tracking-widest z-10 pointer-events-none">SYS. ALDEBARAN//LOOT</div>
+                    <div class="absolute bottom-1 left-3 text-[10px] font-bold text-black/60 tracking-widest z-10 pointer-events-none">ID.PROJET_NOVA</div>
+
+                    <div class="flex flex-col h-full gap-3 relative z-30">
+
+                        <!-- HEADER -->
+                        <div class="flex gap-2 h-14 shrink-0 transition-all duration-300">
+                            <!-- Nom + Picto fusionnés (Case Type supprimée) -->
+                            <div id="preview-name-container" 
+                                 class="bg-slate-900 rounded-xl w-full flex-1 shadow-[0px_4px_10px_rgba(0,0,0,0.3)] border-b-2 border-white/20 flex items-center justify-center px-4 transition-all duration-300">
+                                
+                                <span id="preview-name" class="uppercase text-3xl font-bold text-center text-slate-100 overflow-hidden whitespace-nowrap truncate">NOM DE LA CARTE</span>
+
+                                <!-- Conteneur dynamique pour l'icône Lucide (déplacé à droite) -->
+                                <div id="preview-icon-container" class="flex-shrink-0 flex items-center justify-center ml-3">
+                                    <i data-lucide="hand" class="w-7 h-7 opacity-80 text-white"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CENTRE: Image -->
+                        <div class="flex-grow bg-slate-300 rounded-xl relative overflow-hidden shadow-[inset_0px_0px_20px_rgba(0,0,0,0.5)] border-2 border-slate-800 flex items-center justify-center tech-border">
+                            <!-- Note: l'image uploadée subira un léger filtre pour s'intégrer au look usé -->
+                            <img id="preview-image" src="" class="w-full h-full object-cover object-center hidden opacity-90 sepia-[.2] contrast-125 grayscale-[.2]">
+                            
+                            <div id="preview-placeholder" class="text-center text-slate-500 bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl backdrop-blur-sm">
+                                <i data-lucide="image" class="w-12 h-12 mb-2 mx-auto text-slate-400"></i>
+                                <span class="text-xs font-bold uppercase tracking-widest opacity-90 text-slate-300">Cible Visuelle</span>
+                            </div>
+                        </div>
+
+                        <!-- DESCRIPTION -->
+                        <div id="preview-desc" 
+                             class="h-40 shrink-0 bg-slate-100/95 rounded-xl shadow-[0px_4px_10px_rgba(0,0,0,0.3)] border-2 border-slate-800 flex flex-col justify-center text-justify hyphens-auto uppercase text-slate-900 text-sm font-bold leading-tight whitespace-pre-wrap transition-all duration-300 p-4">
+                            DESCRIPTIF DE LA CARTE
+                        </div>
+
+                        <!-- FOOTER (Power + Prix) -->
+                        <div id="card-footer" class="flex gap-3 h-16 shrink-0 transition-all duration-300">
+                            <!-- Power -->
+                            <div class="bg-slate-900 rounded-xl flex-1 shadow-[0px_4px_10px_rgba(0,0,0,0.3)] border-b-4 border-amber-500 flex flex-col justify-center items-center px-2 overflow-hidden text-amber-500 uppercase relative">
+                                <div id="label-power" class="text-[10px] font-bold w-full text-center truncate text-slate-400">BONUS POWER</div>
+                                <div id="preview-power" class="text-3xl font-bold leading-none w-full text-center truncate drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">+1</div>
+                            </div>
+                            <!-- Prix / Récompenses -->
+                            <div class="bg-slate-900 rounded-xl flex-1 shadow-[0px_4px_10px_rgba(0,0,0,0.3)] border-b-4 border-emerald-500 flex flex-col justify-center items-center px-2 overflow-hidden text-emerald-500 uppercase relative">
+                                <div id="label-price" class="text-[10px] font-bold w-full text-center truncate text-slate-400">PRIX EN BASTOS</div>
+                                <div class="flex items-center justify-center gap-1 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">
+                                    <span id="preview-price" class="text-3xl font-bold leading-none truncate">5</span>
+                                    <!-- Icône Bastos/Munition personnalisée -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <!-- Étui -->
+                                        <path d="M9 10v10" />
+                                        <path d="M15 10v10" />
+                                        <path d="M8 20h8" />
+                                        <path d="M9 22h6" />
+                                        <path d="M9 20v2" />
+                                        <path d="M15 20v2" />
+                                        <!-- Ogive -->
+                                        <path d="M9 10c0-4 3-8 3-8s3 4 3 8" />
+                                        <path d="M8 10h8" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div id="preview-empty" class="hidden-mode text-center">
+                <i data-lucide="cone" class="w-16 h-16 text-slate-600 mx-auto mb-4"></i>
+                <h3 class="text-xl font-bold text-slate-300">Modèle en construction</h3>
+                <p class="text-slate-500">Sélectionnez le mode LOOT ou AVENTURE.</p>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- === MODALE DE RECADRAGE D'IMAGE === -->
+    <div id="crop-modal" class="hidden-mode fixed inset-0 z-50 bg-slate-900/90 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-800 p-6 rounded-2xl max-w-2xl w-full flex flex-col gap-4 border border-slate-600 shadow-2xl">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="crop" class="w-5 h-5 text-blue-500"></i> Ajuster l'image
+            </h3>
+            <p class="text-sm text-slate-400 -mt-2">Utilisez la molette pour zoomer, et glissez pour déplacer l'image dans le cadre.</p>
+            
+            <div class="w-full h-96 bg-slate-950 rounded-xl overflow-hidden border border-slate-700 relative">
+                <img id="crop-image-target" class="max-w-full block" src="">
+            </div>
+            
+            <div class="flex gap-4 justify-end mt-2">
+                <button onclick="closeCropper()" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-white font-medium transition-colors">
+                    Annuler
+                </button>
+                <button onclick="applyCrop()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold transition-colors flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i> Valider
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === JAVASCRIPT LOGIC === -->
+    <script>
+        lucide.createIcons();
+
+        let currentMode = 'loot';
+        let cropperInstance = null; // Variable globale pour stocker l'outil de recadrage
+
+        // === 1. Gestion des Modes ===
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // UI Onglets
+            const tabs = ['loot', 'aventure', 'personnage'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === mode) {
+                    btn.classList.remove('text-slate-400', 'hover:bg-slate-700', 'hover:text-white');
+                    let colorClass = 'bg-blue-600';
+                    if (mode === 'aventure') colorClass = 'bg-green-600';
+                    if (mode === 'personnage') colorClass = 'bg-red-600';
+                    
+                    btn.className = `flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-white shadow-md ${colorClass}`;
+                } else {
+                    btn.className = 'flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white';
+                }
+            });
+
+            // Affichage Formulaire
+            document.getElementById('form-loot').classList.add('hidden-mode');
+            document.getElementById('form-aventure').classList.add('hidden-mode');
+            document.getElementById('form-personnage').classList.add('hidden-mode');
+            document.getElementById(`form-${mode}`).classList.remove('hidden-mode');
+
+            // Mise à jour Titre et Bouton
+            const titles = { 'loot': 'Éditeur LOOT', 'aventure': 'Éditeur AVENTURE', 'personnage': 'Éditeur PERSONNAGE' };
+            document.getElementById('editor-title').innerText = titles[mode];
+            
+            const btnDownload = document.getElementById('btn-download');
+            btnDownload.className = "flex-1 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 border border-slate-600";
+            if(mode === 'aventure') {
+                btnDownload.classList.add('hover:bg-green-700', 'bg-green-600');
+            } else if (mode === 'personnage') {
+                btnDownload.classList.add('hover:bg-red-700', 'bg-red-600');
+            } else {
+                btnDownload.classList.add('hover:bg-blue-700', 'bg-blue-600');
+            }
+
+            // Gestion de l'affichage de la carte
+            const cardContainer = document.getElementById('card-preview-container');
+            const emptyState = document.getElementById('preview-empty');
+
+            cardContainer.classList.remove('hidden-mode');
+            emptyState.classList.add('hidden-mode');
+            
+            // Mettre à jour le contenu de la carte selon le mode
+            updateCardContent(mode);
+        }
+
+        // === 2. Mise à jour du contenu de la carte ===
+        function updateCardContent(mode) {
+            const card = document.getElementById('card-preview');
+            const labelPower = document.getElementById('label-power');
+            const labelPrice = document.getElementById('label-price');
+            
+            // Récupérer les éléments de prévisualisation
+            const pName = document.getElementById('preview-name');
+            const pDesc = document.getElementById('preview-desc');
+            const pPower = document.getElementById('preview-power');
+            const pPrice = document.getElementById('preview-price');
+            const footer = document.getElementById('card-footer');
+            const sysText = document.getElementById('preview-sys-text');
+            const iconContainer = document.getElementById('preview-icon-container');
+
+            // Mise à jour du tag système en haut à droite
+            sysText.innerText = `SYS. ALDEBARAN//${mode.toUpperCase()}`;
+
+            // Reset layout standards
+            pDesc.style.height = '10rem'; // Reset height default
+            footer.classList.remove('hidden-mode');
+
+            if (mode === 'loot') {
+                iconContainer.classList.remove('hidden-mode');
+                updateLootType(); 
+                labelPower.innerText = "BONUS POWER";
+                labelPrice.innerText = "PRIX EN BASTOS";
+
+                pName.innerText = document.getElementById('loot-name').value;
+                pDesc.innerText = document.getElementById('loot-desc').value;
+                pPower.innerText = document.getElementById('loot-power').value;
+                pPrice.innerText = document.getElementById('loot-price').value;
+
+            } else if (mode === 'aventure') {
+                iconContainer.classList.add('hidden-mode');
+                updateAdventureColor(); 
+                labelPower.innerText = "POWER";
+                labelPrice.innerText = "RÉCOMPENSES";
+
+                pName.innerText = document.getElementById('adv-name').value;
+                pDesc.innerText = document.getElementById('adv-desc').value;
+                pPower.innerText = document.getElementById('adv-power').value;
+                pPrice.innerText = document.getElementById('adv-price').value;
+
+            } else if (mode === 'personnage') {
+                iconContainer.classList.add('hidden-mode');
+                card.style.backgroundColor = '#F53333';
+                footer.classList.add('hidden-mode'); // Pas de footer
+                pDesc.style.height = '10rem'; // Description fortement réduite pour maximiser l'artwork du personnage
+
+                pName.innerText = document.getElementById('perso-name').value;
+                pDesc.innerText = document.getElementById('perso-desc').value;
+            }
+        }
+
+        // === 3. Logique spécifique LOOT (Fourberie vs Standard) ===
+        function updateLootType() {
+            if (currentMode !== 'loot') return;
+
+            const select = document.getElementById('loot-detail');
+            const selectedOption = select.options[select.selectedIndex];
+            
+            if (selectedOption.disabled) return;
+
+            const color = selectedOption.getAttribute('data-color');
+            const layout = selectedOption.getAttribute('data-layout');
+            const iconName = selectedOption.value;
+
+            // Changement de la couleur
+            document.getElementById('card-preview').style.backgroundColor = color;
+            
+            // Changement de l'icone avec gestion de l'exception "2 Mains"
+            const iconContainer = document.getElementById('preview-icon-container');
+            if (iconName === 'two-hands') {
+                iconContainer.innerHTML = `
+                    <div class="flex items-center justify-center gap-0.5">
+                        <i data-lucide="hand" class="w-6 h-6 opacity-80 text-white -scale-x-100"></i>
+                        <i data-lucide="hand" class="w-6 h-6 opacity-80 text-white"></i>
+                    </div>
+                `;
+            } else {
+                iconContainer.innerHTML = `<i data-lucide="${iconName}" class="w-7 h-7 opacity-80 text-white"></i>`;
+            }
+            lucide.createIcons({ root: iconContainer });
+
+            const footer = document.getElementById('card-footer');
+            const inputs = document.getElementById('loot-stats-inputs');
+            const desc = document.getElementById('preview-desc');
+
+            if (layout === 'fourberie') {
+                footer.classList.add('hidden-mode');
+                inputs.classList.add('hidden-mode');
+                desc.style.height = '14.75rem';
+            } else {
+                footer.classList.remove('hidden-mode');
+                inputs.classList.remove('hidden-mode');
+                desc.style.height = '10rem';
+            }
+        }
+
+        // === 4. Logique spécifique Aventure ===
+        function updateAdventureColor() {
+            if (currentMode !== 'aventure') return;
+            
+            const select = document.getElementById('adv-type');
+            const selectedOption = select.options[select.selectedIndex];
+            const color = selectedOption.getAttribute('data-color');
+
+            document.getElementById('card-preview').style.backgroundColor = color;
+        }
+
+        // === 5. Listeners Inputs (Data Binding) ===
+        const lootInputs = [
+            ['loot-name', 'preview-name'],
+            ['loot-desc', 'preview-desc'],
+            ['loot-power', 'preview-power'],
+            ['loot-price', 'preview-price']
+        ];
+        lootInputs.forEach(pair => {
+            document.getElementById(pair[0]).addEventListener('input', (e) => {
+                if(currentMode === 'loot') document.getElementById(pair[1]).innerText = e.target.value;
+            });
+        });
+
+        const advInputs = [
+            ['adv-name', 'preview-name'],
+            ['adv-desc', 'preview-desc'],
+            ['adv-power', 'preview-power'],
+            ['adv-price', 'preview-price']
+        ];
+        advInputs.forEach(pair => {
+            document.getElementById(pair[0]).addEventListener('input', (e) => {
+                if(currentMode === 'aventure') document.getElementById(pair[1]).innerText = e.target.value;
+            });
+        });
+
+        const persoInputs = [
+            ['perso-name', 'preview-name'],
+            ['perso-desc', 'preview-desc']
+        ];
+        persoInputs.forEach(pair => {
+            document.getElementById(pair[0]).addEventListener('input', (e) => {
+                if(currentMode === 'personnage') document.getElementById(pair[1]).innerText = e.target.value;
+            });
+        });
+
+        // === 6. Gestion Images avec Recadrage (Cropper.js) ===
+        function handleImage(inputId) {
+            document.getElementById(inputId).addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const cropModal = document.getElementById('crop-modal');
+                        const cropImg = document.getElementById('crop-image-target');
+                        
+                        // Mesurer dynamiquement la taille de la zone d'image actuelle de la carte
+                        // pour imposer le ratio exact au recadreur, peu importe le mode sélectionné
+                        const imageZone = document.querySelector('#card-preview .flex-grow');
+                        const targetRatio = imageZone.offsetWidth / imageZone.offsetHeight;
+                        
+                        // Afficher l'image dans la modale
+                        cropImg.src = event.target.result;
+                        cropModal.classList.remove('hidden-mode');
+                        
+                        // Détruire l'ancienne instance si elle existe
+                        if (cropperInstance) {
+                            cropperInstance.destroy();
+                        }
+                        
+                        // Initialiser Cropper.js avec le masque de cadre fixe
+                        setTimeout(() => {
+                            cropperInstance = new Cropper(cropImg, {
+                                aspectRatio: targetRatio, // Applique le ratio calculé dynamiquement
+                                viewMode: 1, // Restreint l'image pour qu'elle couvre toujours le cadre
+                                dragMode: 'move', // L'utilisateur déplace l'image, pas le cadre
+                                autoCropArea: 0.9, // Le cadre prend 90% de l'espace de la modale
+                                restore: false,
+                                guides: false, // Supprime la grille interne
+                                center: false,
+                                highlight: false,
+                                cropBoxMovable: false, // Le cadre ne peut plus être bougé
+                                cropBoxResizable: false, // Le cadre ne peut plus être redimensionné
+                                toggleDragModeOnDblclick: false,
+                                background: false, // Retire le damier par défaut
+                            });
+                        }, 50);
+                    }
+                    reader.readAsDataURL(file);
+                    
+                    // Réinitialiser l'input file pour permettre de resélectionner la même image si annulé
+                    e.target.value = '';
+                }
+            });
+        }
+
+        // Fonctions pour gérer la modale de recadrage
+        function closeCropper() {
+            document.getElementById('crop-modal').classList.add('hidden-mode');
+            if (cropperInstance) {
+                cropperInstance.destroy();
+                cropperInstance = null;
+            }
+        }
+
+        function applyCrop() {
+            if (!cropperInstance) return;
+            
+            // Récupérer la portion recadrée sous forme de canevas
+            const canvas = cropperInstance.getCroppedCanvas({
+                maxWidth: 1024,
+                maxHeight: 1024,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high',
+            });
+            
+            // Appliquer à l'image finale de la carte
+            const img = document.getElementById('preview-image');
+            const placeholder = document.getElementById('preview-placeholder');
+            
+            img.src = canvas.toDataURL('image/jpeg', 0.9);
+            img.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            
+            closeCropper();
+        }
+
+        handleImage('loot-image');
+        handleImage('adv-image');
+        handleImage('perso-image');
+
+        // === 7. Reset ===
+        function resetForm() {
+            if (currentMode === 'loot') {
+                document.getElementById('loot-name').value = "NOM DE LA CARTE";
+                document.getElementById('loot-detail').selectedIndex = 0;
+                document.getElementById('loot-desc').value = "DESCRIPTIF DE LA CARTE";
+                document.getElementById('loot-power').value = "+1";
+                document.getElementById('loot-price').value = "5";
+                document.getElementById('loot-image').value = "";
+            } else if (currentMode === 'aventure') {
+                document.getElementById('adv-name').value = "NOM DE L'AVENTURE";
+                document.getElementById('adv-type').selectedIndex = 0;
+                document.getElementById('adv-desc').value = "DESCRIPTIF DE L'AVENTURE";
+                document.getElementById('adv-power').value = "PUISSANCE";
+                document.getElementById('adv-price').value = "BUTIN";
+                document.getElementById('adv-image').value = "";
+            } else if (currentMode === 'personnage') {
+                document.getElementById('perso-name').value = "NOM DU PERSONNAGE";
+                document.getElementById('perso-desc').value = "HISTOIRE DU PERSONNAGE...";
+                document.getElementById('perso-image').value = "";
+            }
+
+            updateCardContent(currentMode);
+            document.getElementById('preview-image').src = "";
+            document.getElementById('preview-image').classList.add('hidden');
+            document.getElementById('preview-placeholder').classList.remove('hidden');
+        }
+
+        // === 8. Download (CORRECTION DU DÉCALAGE VIA SCROLL) ===
+        async function downloadCard() {
+            const btn = document.getElementById('btn-download');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner"></div><span>Génération...</span>';
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            try {
+                await document.fonts.ready;
+                const currentScrollY = window.scrollY;
+                window.scrollTo(0, 0);
+
+                const element = document.getElementById('card-preview');
+                const canvas = await html2canvas(element, { 
+                    scale: 2, 
+                    backgroundColor: null, 
+                    useCORS: true,
+                    scrollX: 0,
+                    scrollY: 0,
+                    width: element.offsetWidth,
+                    height: element.offsetHeight,
+                    windowWidth: document.documentElement.offsetWidth,
+                    windowHeight: document.documentElement.offsetHeight
+                });
+                
+                window.scrollTo(0, currentScrollY);
+
+                const link = document.createElement('a');
+                link.download = document.getElementById('preview-name').innerText.replace(/\s+/g, '_') + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la génération avec html2canvas.");
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                lucide.createIcons();
+            }
+        }
+
+        // === 9. Initialisation au chargement ===
+        // Force la synchronisation entre le HTML et les données JavaScript dès l'ouverture
+        switchMode(currentMode);
+    </script>
+</body>
+</html>
