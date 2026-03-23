@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Générateur de Cartes Bastos</title>
     
-    <!-- 1. Chargement de Tailwind CSS (SANS crossorigin pour éviter le crash) -->
+    <!-- 1. Chargement de Tailwind CSS (SANS crossorigin pour ne pas casser le design) -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. Chargement de la police futuriste Rajdhani -->
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- 2. Chargement de la police futuriste Rajdhani AVEC autorisation CORS pour html-to-image -->
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
     
     <!-- 3. Chargement des icônes Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- 4. Retour à html2canvas (Gère mieux les CDN) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- 4. html-to-image (Moteur de rendu SVG au pixel près) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
-    <!-- 5. Chargement de Cropper.js pour le redimensionnement d'image -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <!-- 5. Chargement de Cropper.js AVEC autorisation CORS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet" crossorigin="anonymous">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     <style>
@@ -28,17 +28,21 @@
         /* Masquer la scrollbar si nécessaire */
         textarea { resize: none; }
 
-        /* Textures Futuristes et Papier */
+        /* Textures Futuristes et Papier (100% CSS) */
         .scanlines {
             background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
         }
         .crumpled-paper {
-            /* Véritable texture de papier froissé (Hébergée sur Unsplash, compatible CORS) */
-            background-image: url('https://images.unsplash.com/photo-1603484477859-abe6a73f9366?auto=format&fit=crop&w=420&q=80');
-            background-size: cover;
-            background-position: center;
-            opacity: 0.45; /* Permet de voir la couleur de la carte à travers */
-            mix-blend-mode: multiply; /* Assombrit les creux du papier pour plus de réalisme */
+            background-image: 
+                radial-gradient(circle at 15% 25%, rgba(0,0,0,0.2) 0%, transparent 40%),
+                radial-gradient(circle at 85% 15%, rgba(0,0,0,0.15) 0%, transparent 50%),
+                radial-gradient(circle at 35% 85%, rgba(0,0,0,0.25) 0%, transparent 45%),
+                radial-gradient(circle at 75% 80%, rgba(0,0,0,0.2) 0%, transparent 40%),
+                linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%),
+                linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.03) 75%);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 4px 4px, 4px 4px;
+            opacity: 0.8; 
+            mix-blend-mode: multiply; 
         }
         .tech-border {
             background: 
@@ -65,17 +69,17 @@
         /* Utilitaires pour masquer/afficher */
         .hidden-mode { display: none !important; }
 
-        /* --- Personnalisation de Cropper.js (Masque sombre et cadre fixe) --- */
+        /* --- Personnalisation de Cropper.js --- */
         .cropper-modal {
-            background-color: #020617 !important; /* Slate 950 */
-            opacity: 0.85 !important; /* Contour opaque sombre */
+            background-color: #020617 !important;
+            opacity: 0.85 !important; 
         }
         .cropper-view-box {
-            border-radius: 0.75rem; /* Arrondi correspondant à la vignette de la carte */
-            outline: 2px solid #5381ED !important; /* Bordure colorée pour bien voir le cadre */
+            border-radius: 0.75rem; 
+            outline: 2px solid #5381ED !important; 
         }
         .cropper-line, .cropper-point, .cropper-dashed, .cropper-center {
-            display: none !important; /* Masquer tous les outils de redimensionnement du cadre */
+            display: none !important; 
         }
     </style>
 </head>
@@ -119,7 +123,6 @@
                             <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Détail (Type)</label>
                             <select id="loot-detail" onchange="updateLootType()"
                                 class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white transition-all cursor-pointer">
-                                <!-- Modification ici : value = nom de l'icone lucide -->
                                 <option value="hand" data-color="#5381ED" data-layout="standard">🖐 Main</option>
                                 <option value="two-hands" data-color="#5381ED" data-layout="standard">🖐🖐 2 Mains</option>
                                 <option value="hard-hat" data-color="#5381ED" data-layout="standard">🪖 Tête</option>
@@ -273,12 +276,11 @@
                      class="relative shadow-2xl overflow-hidden flex flex-col font-card box-border transform transition-all duration-300 rounded-2xl"
                      style="width: 420px; height: 680px; background-color: #5381ED; border: 4px solid #0f172a; padding: 16px;">
                     
-                    <!-- CALQUES DE TEXTURE (Papier froissé + Scanlines) -->
+                    <!-- CALQUES DE TEXTURE -->
                     <div class="absolute inset-0 crumpled-paper pointer-events-none z-10 rounded-xl"></div>
                     <div class="absolute inset-0 scanlines pointer-events-none z-20 opacity-60 rounded-xl"></div>
                     
                     <!-- ÉLÉMENTS HUD FUTURISTES -->
-                    <!-- Mise à jour du texte système en haut à droite -->
                     <div id="preview-sys-text" class="absolute top-1 right-3 text-[10px] font-bold text-black/60 tracking-widest z-10 pointer-events-none">SYS. ALDEBARAN//LOOT</div>
                     <div class="absolute bottom-1 left-3 text-[10px] font-bold text-black/60 tracking-widest z-10 pointer-events-none">ID.PROJET_NOVA</div>
 
@@ -286,13 +288,10 @@
 
                         <!-- HEADER -->
                         <div class="flex gap-2 h-14 shrink-0 transition-all duration-300">
-                            <!-- Nom + Picto fusionnés (Case Type supprimée) -->
+                            <!-- Nom + Picto fusionnés -->
                             <div id="preview-name-container" 
                                  class="bg-slate-900 rounded-xl w-full flex-1 shadow-[0px_4px_10px_rgba(0,0,0,0.3)] border-b-2 border-white/20 flex items-center justify-center px-4 transition-all duration-300">
-                                
                                 <span id="preview-name" class="uppercase text-3xl font-bold text-center text-slate-100 overflow-hidden whitespace-nowrap truncate">NOM DE LA CARTE</span>
-
-                                <!-- Conteneur dynamique pour l'icône Lucide (déplacé à droite) -->
                                 <div id="preview-icon-container" class="flex-shrink-0 flex items-center justify-center ml-3">
                                     <i data-lucide="hand" class="w-7 h-7 opacity-80 text-white"></i>
                                 </div>
@@ -301,7 +300,6 @@
 
                         <!-- CENTRE: Image -->
                         <div class="flex-grow bg-slate-300 rounded-xl relative overflow-hidden shadow-[inset_0px_0px_20px_rgba(0,0,0,0.5)] border-2 border-slate-800 flex items-center justify-center tech-border">
-                            <!-- Note: l'image uploadée subira un léger filtre pour s'intégrer au look usé -->
                             <img id="preview-image" src="" class="w-full h-full object-cover object-center hidden opacity-90 sepia-[.2] contrast-125 grayscale-[.2]">
                             
                             <div id="preview-placeholder" class="text-center text-slate-500 bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl backdrop-blur-sm">
@@ -330,14 +328,12 @@
                                     <span id="preview-price" class="text-3xl font-bold leading-none truncate">5</span>
                                     <!-- Icône Bastos/Munition personnalisée -->
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <!-- Étui -->
                                         <path d="M9 10v10" />
                                         <path d="M15 10v10" />
                                         <path d="M8 20h8" />
                                         <path d="M9 22h6" />
                                         <path d="M9 20v2" />
                                         <path d="M15 20v2" />
-                                        <!-- Ogive -->
                                         <path d="M9 10c0-4 3-8 3-8s3 4 3 8" />
                                         <path d="M8 10h8" />
                                     </svg>
@@ -386,13 +382,12 @@
         lucide.createIcons();
 
         let currentMode = 'loot';
-        let cropperInstance = null; // Variable globale pour stocker l'outil de recadrage
+        let cropperInstance = null; 
 
         // === 1. Gestion des Modes ===
         function switchMode(mode) {
             currentMode = mode;
             
-            // UI Onglets
             const tabs = ['loot', 'aventure', 'personnage'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
@@ -408,13 +403,11 @@
                 }
             });
 
-            // Affichage Formulaire
             document.getElementById('form-loot').classList.add('hidden-mode');
             document.getElementById('form-aventure').classList.add('hidden-mode');
             document.getElementById('form-personnage').classList.add('hidden-mode');
             document.getElementById(`form-${mode}`).classList.remove('hidden-mode');
 
-            // Mise à jour Titre et Bouton
             const titles = { 'loot': 'Éditeur LOOT', 'aventure': 'Éditeur AVENTURE', 'personnage': 'Éditeur PERSONNAGE' };
             document.getElementById('editor-title').innerText = titles[mode];
             
@@ -428,14 +421,12 @@
                 btnDownload.classList.add('hover:bg-blue-700', 'bg-blue-600');
             }
 
-            // Gestion de l'affichage de la carte
             const cardContainer = document.getElementById('card-preview-container');
             const emptyState = document.getElementById('preview-empty');
 
             cardContainer.classList.remove('hidden-mode');
             emptyState.classList.add('hidden-mode');
             
-            // Mettre à jour le contenu de la carte selon le mode
             updateCardContent(mode);
         }
 
@@ -445,7 +436,6 @@
             const labelPower = document.getElementById('label-power');
             const labelPrice = document.getElementById('label-price');
             
-            // Récupérer les éléments de prévisualisation
             const pName = document.getElementById('preview-name');
             const pDesc = document.getElementById('preview-desc');
             const pPower = document.getElementById('preview-power');
@@ -454,11 +444,9 @@
             const sysText = document.getElementById('preview-sys-text');
             const iconContainer = document.getElementById('preview-icon-container');
 
-            // Mise à jour du tag système en haut à droite
             sysText.innerText = `SYS. ALDEBARAN//${mode.toUpperCase()}`;
 
-            // Reset layout standards
-            pDesc.style.height = '10rem'; // Reset height default
+            pDesc.style.height = '10rem'; 
             footer.classList.remove('hidden-mode');
 
             if (mode === 'loot') {
@@ -486,15 +474,15 @@
             } else if (mode === 'personnage') {
                 iconContainer.classList.add('hidden-mode');
                 card.style.backgroundColor = '#F53333';
-                footer.classList.add('hidden-mode'); // Pas de footer
-                pDesc.style.height = '10rem'; // Description fortement réduite pour maximiser l'artwork du personnage
+                footer.classList.add('hidden-mode'); 
+                pDesc.style.height = '10rem'; 
 
                 pName.innerText = document.getElementById('perso-name').value;
                 pDesc.innerText = document.getElementById('perso-desc').value;
             }
         }
 
-        // === 3. Logique spécifique LOOT (Fourberie vs Standard) ===
+        // === 3. Logique spécifique LOOT ===
         function updateLootType() {
             if (currentMode !== 'loot') return;
 
@@ -507,10 +495,8 @@
             const layout = selectedOption.getAttribute('data-layout');
             const iconName = selectedOption.value;
 
-            // Changement de la couleur
             document.getElementById('card-preview').style.backgroundColor = color;
             
-            // Changement de l'icone avec gestion de l'exception "2 Mains"
             const iconContainer = document.getElementById('preview-icon-container');
             if (iconName === 'two-hands') {
                 iconContainer.innerHTML = `
@@ -542,50 +528,22 @@
         // === 4. Logique spécifique Aventure ===
         function updateAdventureColor() {
             if (currentMode !== 'aventure') return;
-            
             const select = document.getElementById('adv-type');
             const selectedOption = select.options[select.selectedIndex];
-            const color = selectedOption.getAttribute('data-color');
-
-            document.getElementById('card-preview').style.backgroundColor = color;
+            document.getElementById('card-preview').style.backgroundColor = selectedOption.getAttribute('data-color');
         }
 
-        // === 5. Listeners Inputs (Data Binding) ===
-        const lootInputs = [
-            ['loot-name', 'preview-name'],
-            ['loot-desc', 'preview-desc'],
-            ['loot-power', 'preview-power'],
-            ['loot-price', 'preview-price']
-        ];
-        lootInputs.forEach(pair => {
-            document.getElementById(pair[0]).addEventListener('input', (e) => {
-                if(currentMode === 'loot') document.getElementById(pair[1]).innerText = e.target.value;
-            });
-        });
+        // === 5. Listeners Inputs ===
+        const lootInputs = [['loot-name', 'preview-name'], ['loot-desc', 'preview-desc'], ['loot-power', 'preview-power'], ['loot-price', 'preview-price']];
+        lootInputs.forEach(pair => document.getElementById(pair[0]).addEventListener('input', (e) => { if(currentMode === 'loot') document.getElementById(pair[1]).innerText = e.target.value; }));
 
-        const advInputs = [
-            ['adv-name', 'preview-name'],
-            ['adv-desc', 'preview-desc'],
-            ['adv-power', 'preview-power'],
-            ['adv-price', 'preview-price']
-        ];
-        advInputs.forEach(pair => {
-            document.getElementById(pair[0]).addEventListener('input', (e) => {
-                if(currentMode === 'aventure') document.getElementById(pair[1]).innerText = e.target.value;
-            });
-        });
+        const advInputs = [['adv-name', 'preview-name'], ['adv-desc', 'preview-desc'], ['adv-power', 'preview-power'], ['adv-price', 'preview-price']];
+        advInputs.forEach(pair => document.getElementById(pair[0]).addEventListener('input', (e) => { if(currentMode === 'aventure') document.getElementById(pair[1]).innerText = e.target.value; }));
 
-        const persoInputs = [
-            ['perso-name', 'preview-name'],
-            ['perso-desc', 'preview-desc']
-        ];
-        persoInputs.forEach(pair => {
-            document.getElementById(pair[0]).addEventListener('input', (e) => {
-                if(currentMode === 'personnage') document.getElementById(pair[1]).innerText = e.target.value;
-            });
-        });
+        const persoInputs = [['perso-name', 'preview-name'], ['perso-desc', 'preview-desc']];
+        persoInputs.forEach(pair => document.getElementById(pair[0]).addEventListener('input', (e) => { if(currentMode === 'personnage') document.getElementById(pair[1]).innerText = e.target.value; }));
 
-        // === 6. Gestion Images avec Recadrage (Cropper.js) ===
+        // === 6. Gestion Images avec Recadrage ===
         function handleImage(inputId) {
             document.getElementById(inputId).addEventListener('change', function(e) {
                 const file = e.target.files[0];
@@ -595,47 +553,37 @@
                         const cropModal = document.getElementById('crop-modal');
                         const cropImg = document.getElementById('crop-image-target');
                         
-                        // Mesurer dynamiquement la taille de la zone d'image actuelle de la carte
-                        // pour imposer le ratio exact au recadreur, peu importe le mode sélectionné
                         const imageZone = document.querySelector('#card-preview .flex-grow');
                         const targetRatio = imageZone.offsetWidth / imageZone.offsetHeight;
                         
-                        // Afficher l'image dans la modale
                         cropImg.src = event.target.result;
                         cropModal.classList.remove('hidden-mode');
                         
-                        // Détruire l'ancienne instance si elle existe
-                        if (cropperInstance) {
-                            cropperInstance.destroy();
-                        }
+                        if (cropperInstance) cropperInstance.destroy();
                         
-                        // Initialiser Cropper.js avec le masque de cadre fixe
                         setTimeout(() => {
                             cropperInstance = new Cropper(cropImg, {
-                                aspectRatio: targetRatio, // Applique le ratio calculé dynamiquement
-                                viewMode: 1, // Restreint l'image pour qu'elle couvre toujours le cadre
-                                dragMode: 'move', // L'utilisateur déplace l'image, pas le cadre
-                                autoCropArea: 0.9, // Le cadre prend 90% de l'espace de la modale
+                                aspectRatio: targetRatio, 
+                                viewMode: 1, 
+                                dragMode: 'move', 
+                                autoCropArea: 0.9, 
                                 restore: false,
-                                guides: false, // Supprime la grille interne
+                                guides: false, 
                                 center: false,
                                 highlight: false,
-                                cropBoxMovable: false, // Le cadre ne peut plus être bougé
-                                cropBoxResizable: false, // Le cadre ne peut plus être redimensionné
+                                cropBoxMovable: false, 
+                                cropBoxResizable: false, 
                                 toggleDragModeOnDblclick: false,
-                                background: false, // Retire le damier par défaut
+                                background: false, 
                             });
                         }, 50);
                     }
                     reader.readAsDataURL(file);
-                    
-                    // Réinitialiser l'input file pour permettre de resélectionner la même image si annulé
                     e.target.value = '';
                 }
             });
         }
 
-        // Fonctions pour gérer la modale de recadrage
         function closeCropper() {
             document.getElementById('crop-modal').classList.add('hidden-mode');
             if (cropperInstance) {
@@ -646,29 +594,18 @@
 
         function applyCrop() {
             if (!cropperInstance) return;
-            
-            // Récupérer la portion recadrée sous forme de canevas
             const canvas = cropperInstance.getCroppedCanvas({
-                maxWidth: 1024,
-                maxHeight: 1024,
-                imageSmoothingEnabled: true,
-                imageSmoothingQuality: 'high',
+                maxWidth: 1024, maxHeight: 1024, imageSmoothingEnabled: true, imageSmoothingQuality: 'high',
             });
-            
-            // Appliquer à l'image finale de la carte
             const img = document.getElementById('preview-image');
             const placeholder = document.getElementById('preview-placeholder');
-            
             img.src = canvas.toDataURL('image/jpeg', 0.9);
             img.classList.remove('hidden');
             placeholder.classList.add('hidden');
-            
             closeCropper();
         }
 
-        handleImage('loot-image');
-        handleImage('adv-image');
-        handleImage('perso-image');
+        handleImage('loot-image'); handleImage('adv-image'); handleImage('perso-image');
 
         // === 7. Reset ===
         function resetForm() {
@@ -691,14 +628,13 @@
                 document.getElementById('perso-desc').value = "HISTOIRE DU PERSONNAGE...";
                 document.getElementById('perso-image').value = "";
             }
-
             updateCardContent(currentMode);
             document.getElementById('preview-image').src = "";
             document.getElementById('preview-image').classList.add('hidden');
             document.getElementById('preview-placeholder').classList.remove('hidden');
         }
 
-        // === 8. Download (CORRECTION DU DÉCALAGE VIA SCROLL) ===
+        // === 8. Download (Restauration du moteur DOM to Image html-to-image) ===
         async function downloadCard() {
             const btn = document.getElementById('btn-download');
             const originalContent = btn.innerHTML;
@@ -708,31 +644,22 @@
 
             try {
                 await document.fonts.ready;
-                const currentScrollY = window.scrollY;
-                window.scrollTo(0, 0);
-
                 const element = document.getElementById('card-preview');
-                const canvas = await html2canvas(element, { 
-                    scale: 2, 
-                    backgroundColor: null, 
-                    useCORS: true,
-                    scrollX: 0,
-                    scrollY: 0,
-                    width: element.offsetWidth,
-                    height: element.offsetHeight,
-                    windowWidth: document.documentElement.offsetWidth,
-                    windowHeight: document.documentElement.offsetHeight
+
+                // Moteur SVG qui garantit la prise en charge parfaite du text-justify et des drop-shadows
+                const dataUrl = await htmlToImage.toPng(element, { 
+                    quality: 1.0,
+                    pixelRatio: 2, 
+                    style: { transform: 'none' } 
                 });
                 
-                window.scrollTo(0, currentScrollY);
-
                 const link = document.createElement('a');
                 link.download = document.getElementById('preview-name').innerText.replace(/\s+/g, '_') + '.png';
-                link.href = canvas.toDataURL('image/png');
+                link.href = dataUrl;
                 link.click();
             } catch (err) {
                 console.error(err);
-                alert("Erreur lors de la génération avec html2canvas.");
+                alert("Erreur lors de la génération. Veuillez vérifier la console.");
             } finally {
                 btn.innerHTML = originalContent;
                 btn.disabled = false;
@@ -742,7 +669,6 @@
         }
 
         // === 9. Initialisation au chargement ===
-        // Force la synchronisation entre le HTML et les données JavaScript dès l'ouverture
         switchMode(currentMode);
     </script>
 </body>
