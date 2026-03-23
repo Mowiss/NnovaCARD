@@ -8,26 +8,19 @@
     <!-- 1. Chargement de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. Chargement de la police futuriste Rajdhani avec sécurité CORS pour html-to-image -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
-    
-    <!-- 3. Chargement des icônes Lucide -->
+    <!-- 2. Chargement des icônes Lucide -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- 4. MOTEUR SVG PARFAIT (html-to-image) -->
+    <!-- 3. MOTEUR SVG PARFAIT (html-to-image) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
-    <!-- 5. Chargement de Cropper.js avec sécurité CORS -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- 4. Chargement de Cropper.js (JavaScript uniquement, le CSS est géré plus bas pour éviter le crash) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     <style>
-        /* Style personnalisé pour la police de la carte */
+        /* Style personnalisé (La police Rajdhani est injectée par le JS pour éviter les crash CORS de l'impression) */
         .font-card { font-family: 'Rajdhani', sans-serif; }
         
-        /* Masquer la scrollbar si nécessaire */
         textarea { resize: none; }
 
         /* Textures Futuristes et Papier (100% CSS) */
@@ -46,18 +39,7 @@
             opacity: 0.8; 
             mix-blend-mode: multiply; 
         }
-        .tech-border {
-            background: 
-                linear-gradient(90deg, #1e293b 50%, transparent 50%),
-                linear-gradient(90deg, #1e293b 50%, transparent 50%),
-                linear-gradient(0deg, #1e293b 50%, transparent 50%),
-                linear-gradient(0deg, #1e293b 50%, transparent 50%);
-            background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
-            background-size: 16px 4px, 16px 4px, 4px 16px, 4px 16px;
-            background-position: 0 0, 0 100%, 0 0, 100% 0;
-        }
 
-        /* Animation de chargement */
         .spinner {
             border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
@@ -68,7 +50,6 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Utilitaires pour masquer/afficher */
         .hidden-mode { display: none !important; }
 
         /* --- Personnalisation de Cropper.js --- */
@@ -86,14 +67,18 @@
             
             <!-- SÉLECTEUR DE MODE -->
             <div class="bg-slate-800 p-2 rounded-xl border border-slate-700 flex gap-2">
-                <button onclick="switchMode('loot')" id="tab-loot" class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all bg-blue-600 text-white shadow-md">
+                <button onclick="switchMode('loot')" id="tab-loot" class="flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all bg-blue-600 text-white shadow-md">
                     LOOT
                 </button>
-                <button onclick="switchMode('aventure')" id="tab-aventure" class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white">
+                <button onclick="switchMode('aventure')" id="tab-aventure" class="flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white">
                     AVENTURE
                 </button>
-                <button onclick="switchMode('personnage')" id="tab-personnage" class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white">
+                <button onclick="switchMode('personnage')" id="tab-personnage" class="flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white">
                     PERSONNAGE
+                </button>
+                <!-- NOUVEAU BOUTON DOS -->
+                <button onclick="switchMode('dos')" id="tab-dos" class="flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white">
+                    DOS
                 </button>
             </div>
 
@@ -132,7 +117,6 @@
                         </div>
                     </div>
 
-                    <!-- Image Upload Loot -->
                     <div>
                         <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Image</label>
                         <div class="relative border-2 border-dashed border-slate-600 rounded-lg p-4 hover:bg-slate-700 hover:border-blue-500 transition-colors text-center cursor-pointer group">
@@ -150,7 +134,6 @@
                             class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-white">DESCRIPTIF DE LA CARTE</textarea>
                     </div>
 
-                    <!-- Ce bloc est masqué en mode FOURBERIE -->
                     <div id="loot-stats-inputs" class="grid grid-cols-2 gap-4 transition-all duration-300">
                         <div>
                             <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Valeur Bonus</label>
@@ -185,7 +168,6 @@
                         </div>
                     </div>
 
-                    <!-- Image Upload Aventure -->
                     <div>
                         <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Image</label>
                         <div class="relative border-2 border-dashed border-slate-600 rounded-lg p-4 hover:bg-slate-700 hover:border-green-500 transition-colors text-center cursor-pointer group">
@@ -225,7 +207,6 @@
                             class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-white transition-all">
                     </div>
 
-                    <!-- Image Upload Personnage -->
                     <div>
                         <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Image</label>
                         <div class="relative border-2 border-dashed border-slate-600 rounded-lg p-4 hover:bg-slate-700 hover:border-red-500 transition-colors text-center cursor-pointer group">
@@ -241,6 +222,24 @@
                         <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Description / Biographie</label>
                         <textarea id="perso-desc" rows="6" 
                             class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-white">HISTOIRE DU PERSONNAGE...</textarea>
+                    </div>
+                </div>
+
+                <!-- FORMULAIRE DOS -->
+                <div id="form-dos" class="hidden-mode space-y-4">
+                    <div class="p-4 bg-slate-900 border border-slate-700 rounded-xl mb-4">
+                        <p class="text-sm text-slate-300 font-bold">MODE DOS DE CARTE</p>
+                        <p class="text-xs text-slate-500 mt-1">L'image couvrira l'intégralité de la zone interne. Les textes et caractéristiques sont masqués.</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Illustration du Dos</label>
+                        <div class="relative border-2 border-dashed border-slate-600 rounded-lg p-4 hover:bg-slate-700 hover:border-indigo-500 transition-colors text-center cursor-pointer group">
+                            <input type="file" id="dos-image" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            <div class="flex flex-col items-center justify-center text-slate-400 group-hover:text-white">
+                                <i data-lucide="upload" class="w-8 h-8 mb-2"></i>
+                                <span class="text-sm font-medium">Ajouter image géante</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -270,16 +269,18 @@
                      class="relative shadow-2xl overflow-hidden flex flex-col font-card box-border transform transition-all duration-300 rounded-2xl"
                      style="width: 420px; height: 680px; background-color: #5381ED; border: 4px solid #0f172a; padding: 16px;">
                     
-                    <!-- CALQUES DE TEXTURE -->
+                    <!-- CALQUES DE TEXTURE GLOBAUX -->
                     <div class="absolute inset-0 crumpled-paper pointer-events-none z-10 rounded-xl"></div>
                     <div class="absolute inset-0 scanlines pointer-events-none z-20 opacity-60 rounded-xl"></div>
                     
-                    <!-- ÉLÉMENTS HUD FUTURISTES -->
+                    <!-- ÉLÉMENTS HUD FUTURISTES (Masqués en mode DOS) -->
                     <div id="preview-sys-text" class="absolute top-1 right-3 text-[10px] font-bold text-black/60 tracking-widest z-10 pointer-events-none">SYS. ALDEBARAN//LOOT</div>
-                    <div class="absolute bottom-1 left-3 text-[10px] font-bold text-black/60 tracking-widest z-10 pointer-events-none">ID.PROJET_NOVA</div>
+                    <div id="preview-id-text" class="absolute bottom-1 left-3 text-[10px] font-bold text-black/60 tracking-widest z-10 pointer-events-none">ID.PROJET_NOVA</div>
 
-                    <div class="flex flex-col h-full gap-3 relative z-30">
-
+                    <!-- ============================================== -->
+                    <!-- CONTENU FACE (Loot, Aventure, Personnage)      -->
+                    <!-- ============================================== -->
+                    <div id="card-front-elements" class="flex flex-col h-full gap-3 relative z-30">
                         <!-- HEADER -->
                         <div class="flex gap-2 h-14 shrink-0 transition-all duration-300">
                             <div id="preview-name-container" 
@@ -292,10 +293,8 @@
                         </div>
 
                         <!-- CENTRE: Image -->
-                        <div class="flex-grow bg-slate-300 rounded-xl relative overflow-hidden shadow-[inset_0px_0px_20px_rgba(0,0,0,0.5)] border-2 border-slate-800 flex items-center justify-center tech-border">
-                            <!-- Image avec base64 de pixel transparent au lieu d'un src="" vide -->
+                        <div id="front-image-zone" class="flex-grow bg-slate-300 rounded-xl relative overflow-hidden shadow-[inset_0px_0px_20px_rgba(0,0,0,0.5)] border-2 border-slate-800 flex items-center justify-center">
                             <img id="preview-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="w-full h-full object-cover object-center hidden opacity-90 sepia-[.2] contrast-125 grayscale-[.2]">
-                            
                             <div id="preview-placeholder" class="text-center text-slate-500 bg-slate-800/80 p-6 rounded-2xl border border-slate-700 shadow-xl backdrop-blur-sm">
                                 <i data-lucide="image" class="w-12 h-12 mb-2 mx-auto text-slate-400"></i>
                                 <span class="text-xs font-bold uppercase tracking-widest opacity-90 text-slate-300">Cible Visuelle</span>
@@ -326,15 +325,27 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
+
+                    <!-- ============================================== -->
+                    <!-- CONTENU DOS (Pleine page interne)              -->
+                    <!-- ============================================== -->
+                    <div id="card-dos-elements" class="hidden-mode flex-grow w-full h-full relative z-30 bg-slate-900 overflow-hidden shadow-[inset_0px_0px_20px_rgba(0,0,0,0.8)]">
+                        <!-- Image du DOS (filtres retirés pour laisser l'image originale briller) -->
+                        <img id="preview-dos-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="w-full h-full object-cover object-center hidden opacity-95">
+                        <div id="preview-dos-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 bg-slate-950/50 backdrop-blur-sm">
+                            <i data-lucide="layers" class="w-16 h-16 mb-4 mx-auto text-slate-600"></i>
+                            <span class="text-sm font-bold uppercase tracking-widest opacity-90 text-slate-400">Illustration du Dos</span>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
             <div id="preview-empty" class="hidden-mode text-center">
                 <i data-lucide="cone" class="w-16 h-16 text-slate-600 mx-auto mb-4"></i>
                 <h3 class="text-xl font-bold text-slate-300">Modèle en construction</h3>
-                <p class="text-slate-500">Sélectionnez le mode LOOT ou AVENTURE.</p>
+                <p class="text-slate-500">Sélectionnez un mode.</p>
             </div>
             
         </div>
@@ -349,7 +360,6 @@
             <p class="text-sm text-slate-400 -mt-2">Utilisez la molette pour zoomer, et glissez pour déplacer l'image dans le cadre.</p>
             
             <div class="w-full h-96 bg-slate-950 rounded-xl overflow-hidden border border-slate-700 relative">
-                <!-- Image cible avec un pixel transparent en attendant l'upload réel -->
                 <img id="crop-image-target" class="max-w-full block" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
             </div>
             
@@ -366,16 +376,40 @@
 
     <!-- === JAVASCRIPT LOGIC === -->
     <script>
+        // 🚨 FIX CRITIQUE ANTI-PLANTAGE (CORS) : 
+        // Au lieu d'utiliser des balises <link> standards qui font crasher html-to-image à l'export,
+        // nous forçons le téléchargement brut du CSS via fetch() pour l'injecter localement.
+        
+        // 1. Injection de la police Google Fonts
+        fetch('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap')
+            .then(r => r.text())
+            .then(css => {
+                const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
+            })
+            .catch(err => console.error(err));
+
+        // 2. Injection du CSS de Cropper.js
+        fetch('https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css')
+            .then(r => r.text())
+            .then(css => {
+                const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);
+            })
+            .catch(err => console.error(err));
+
         lucide.createIcons();
 
         let currentMode = 'loot';
         let cropperInstance = null; 
+        
+        // Variables pour retenir quelle image on est en train de modifier
+        let currentCropTargetId = null;
+        let currentCropPlaceholderId = null;
 
         // === 1. Gestion des Modes ===
         function switchMode(mode) {
             currentMode = mode;
             
-            const tabs = ['loot', 'aventure', 'personnage'];
+            const tabs = ['loot', 'aventure', 'personnage', 'dos'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 if (t === mode) {
@@ -383,19 +417,22 @@
                     let colorClass = 'bg-blue-600';
                     if (mode === 'aventure') colorClass = 'bg-green-600';
                     if (mode === 'personnage') colorClass = 'bg-red-600';
+                    if (mode === 'dos') colorClass = 'bg-indigo-600'; // Couleur spéciale pour le Dos
                     
-                    btn.className = `flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-white shadow-md ${colorClass}`;
+                    btn.className = `flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all text-white shadow-md ${colorClass}`;
                 } else {
-                    btn.className = 'flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white';
+                    btn.className = `flex-1 py-2 px-3 rounded-lg text-sm font-bold transition-all text-slate-400 hover:bg-slate-700 hover:text-white`;
                 }
             });
 
             document.getElementById('form-loot').classList.add('hidden-mode');
             document.getElementById('form-aventure').classList.add('hidden-mode');
             document.getElementById('form-personnage').classList.add('hidden-mode');
+            document.getElementById('form-dos').classList.add('hidden-mode');
+            
             document.getElementById(`form-${mode}`).classList.remove('hidden-mode');
 
-            const titles = { 'loot': 'Éditeur LOOT', 'aventure': 'Éditeur AVENTURE', 'personnage': 'Éditeur PERSONNAGE' };
+            const titles = { 'loot': 'Éditeur LOOT', 'aventure': 'Éditeur AVENTURE', 'personnage': 'Éditeur PERSONNAGE', 'dos': 'Éditeur DOS' };
             document.getElementById('editor-title').innerText = titles[mode];
             
             const btnDownload = document.getElementById('btn-download');
@@ -404,6 +441,8 @@
                 btnDownload.classList.add('hover:bg-green-700', 'bg-green-600');
             } else if (mode === 'personnage') {
                 btnDownload.classList.add('hover:bg-red-700', 'bg-red-600');
+            } else if (mode === 'dos') {
+                btnDownload.classList.add('hover:bg-indigo-700', 'bg-indigo-600');
             } else {
                 btnDownload.classList.add('hover:bg-blue-700', 'bg-blue-600');
             }
@@ -420,15 +459,39 @@
         // === 2. Mise à jour du contenu de la carte ===
         function updateCardContent(mode) {
             const card = document.getElementById('card-preview');
+            
+            const frontElements = document.getElementById('card-front-elements');
+            const dosElements = document.getElementById('card-dos-elements');
+            const sysText = document.getElementById('preview-sys-text');
+            const idText = document.getElementById('preview-id-text');
+            
+            // Si on est en mode DOS, on masque tout le HUD et on affiche l'image géante
+            if (mode === 'dos') {
+                frontElements.classList.add('hidden-mode');
+                sysText.classList.add('hidden-mode');
+                idText.classList.add('hidden-mode');
+                dosElements.classList.remove('hidden-mode');
+                
+                card.style.backgroundColor = '#0f172a'; // Un fond très sombre par défaut pour le dos
+                card.style.padding = '0px'; // Suppression de l'espacement pour que l'image touche le bord
+                return; // On arrête la fonction ici car le reste ne concerne que la Face
+            } else {
+                frontElements.classList.remove('hidden-mode');
+                sysText.classList.remove('hidden-mode');
+                idText.classList.remove('hidden-mode');
+                dosElements.classList.add('hidden-mode');
+                
+                card.style.padding = '16px'; // Restauration de l'espacement pour les faces
+            }
+
+            // --- Logique classique pour la Face ---
             const labelPower = document.getElementById('label-power');
             const labelPrice = document.getElementById('label-price');
-            
             const pName = document.getElementById('preview-name');
             const pDesc = document.getElementById('preview-desc');
             const pPower = document.getElementById('preview-power');
             const pPrice = document.getElementById('preview-price');
             const footer = document.getElementById('card-footer');
-            const sysText = document.getElementById('preview-sys-text');
             const iconContainer = document.getElementById('preview-icon-container');
 
             sysText.innerText = `SYS. ALDEBARAN//${mode.toUpperCase()}`;
@@ -475,7 +538,6 @@
 
             const select = document.getElementById('loot-detail');
             const selectedOption = select.options[select.selectedIndex];
-            
             if (selectedOption.disabled) return;
 
             const color = selectedOption.getAttribute('data-color');
@@ -530,8 +592,8 @@
         const persoInputs = [['perso-name', 'preview-name'], ['perso-desc', 'preview-desc']];
         persoInputs.forEach(pair => document.getElementById(pair[0]).addEventListener('input', (e) => { if(currentMode === 'personnage') document.getElementById(pair[1]).innerText = e.target.value; }));
 
-        // === 6. Gestion Images avec Recadrage ===
-        function handleImage(inputId) {
+        // === 6. Gestion Images avec Recadrage Intelligent ===
+        function setupImageUpload(inputId, targetImageId, placeholderId, zoneId) {
             document.getElementById(inputId).addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
@@ -540,7 +602,11 @@
                         const cropModal = document.getElementById('crop-modal');
                         const cropImg = document.getElementById('crop-image-target');
                         
-                        const imageZone = document.querySelector('#card-preview .flex-grow');
+                        currentCropTargetId = targetImageId;
+                        currentCropPlaceholderId = placeholderId;
+
+                        // Mesurer le bon conteneur (Face ou Dos)
+                        const imageZone = document.getElementById(zoneId);
                         const targetRatio = imageZone.offsetWidth / imageZone.offsetHeight;
                         
                         cropImg.src = event.target.result;
@@ -580,19 +646,24 @@
         }
 
         function applyCrop() {
-            if (!cropperInstance) return;
+            if (!cropperInstance || !currentCropTargetId) return;
             const canvas = cropperInstance.getCroppedCanvas({
                 maxWidth: 1024, maxHeight: 1024, imageSmoothingEnabled: true, imageSmoothingQuality: 'high',
             });
-            const img = document.getElementById('preview-image');
-            const placeholder = document.getElementById('preview-placeholder');
+            const img = document.getElementById(currentCropTargetId);
+            const placeholder = document.getElementById(currentCropPlaceholderId);
+            
             img.src = canvas.toDataURL('image/jpeg', 0.9);
             img.classList.remove('hidden');
             placeholder.classList.add('hidden');
             closeCropper();
         }
 
-        handleImage('loot-image'); handleImage('adv-image'); handleImage('perso-image');
+        // Lier les inputs aux bons conteneurs (Face = front-image-zone, Dos = card-dos-elements)
+        setupImageUpload('loot-image', 'preview-image', 'preview-placeholder', 'front-image-zone');
+        setupImageUpload('adv-image', 'preview-image', 'preview-placeholder', 'front-image-zone');
+        setupImageUpload('perso-image', 'preview-image', 'preview-placeholder', 'front-image-zone');
+        setupImageUpload('dos-image', 'preview-dos-image', 'preview-dos-placeholder', 'card-dos-elements');
 
         // === 7. Reset ===
         function resetForm() {
@@ -612,16 +683,24 @@
                 document.getElementById('perso-name').value = "NOM DU PERSONNAGE";
                 document.getElementById('perso-desc').value = "HISTOIRE DU PERSONNAGE...";
             }
+            // Note: pas de reset pour le mode DOS car il ne possède qu'une image
+
             updateCardContent(currentMode);
             
-            const img = document.getElementById('preview-image');
-            // Réinitialisation de l'image avec un pixel transparent en Base64
-            img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-            img.classList.add('hidden');
+            // Nettoyage de l'image de la face
+            const imgFront = document.getElementById('preview-image');
+            imgFront.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            imgFront.classList.add('hidden');
             document.getElementById('preview-placeholder').classList.remove('hidden');
+
+            // Nettoyage de l'image du dos
+            const imgDos = document.getElementById('preview-dos-image');
+            imgDos.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            imgDos.classList.add('hidden');
+            document.getElementById('preview-dos-placeholder').classList.remove('hidden');
         }
 
-        // === 8. Download (html-to-image) ===
+        // === 8. Download (Moteur SVG Parfait et sans failles) ===
         async function downloadCard() {
             const btn = document.getElementById('btn-download');
             const originalContent = btn.innerHTML;
@@ -640,7 +719,9 @@
                 });
                 
                 const link = document.createElement('a');
-                link.download = document.getElementById('preview-name').innerText.replace(/\s+/g, '_') + '.png';
+                // Nom de fichier dynamique selon qu'on exporte le dos ou la face
+                let fileName = currentMode === 'dos' ? 'DOS_CARTE' : document.getElementById('preview-name').innerText;
+                link.download = fileName.replace(/\s+/g, '_') + '.png';
                 link.href = dataUrl;
                 link.click();
             } catch (err) {
