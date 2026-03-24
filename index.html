@@ -158,7 +158,7 @@
                         </div>
                         <div>
                             <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Type d'Aventure</label>
-                            <select id="adv-type" onchange="updateAdventureColor()"
+                            <select id="adv-type" onchange="updateAdventureType()"
                                 class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white transition-all cursor-pointer">
                                 <option value="QUÊTE" data-color="#09660E">QUÊTE</option>
                                 <option value="RENCONTRE" data-color="#FF7300">RENCONTRE</option>
@@ -185,14 +185,23 @@
                             class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white">DESCRIPTIF DE L'AVENTURE</textarea>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div id="adv-stats-inputs" class="grid grid-cols-3 gap-4 transition-all duration-300">
                         <div>
                             <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Power</label>
                             <input type="text" id="adv-power" value="PUISSANCE" 
                                 class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Récompenses</label>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Unité</label>
+                            <select id="adv-reward-type" onchange="updateRewardDisplay()"
+                                class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white transition-all cursor-pointer">
+                                <option value="txt">TXT Brut</option>
+                                <option value="loot">🎁 LOOT</option>
+                                <option value="bastos">🪖 BASTOS</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400 uppercase mb-1 block">Récompense</label>
                             <input type="text" id="adv-price" value="BUTIN" 
                                 class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-white">
                         </div>
@@ -319,9 +328,12 @@
                                 <div id="label-price" class="text-[10px] font-bold w-full text-center truncate text-slate-400">PRIX EN BASTOS</div>
                                 <div class="flex items-center justify-center gap-1 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">
                                     <span id="preview-price" class="text-3xl font-bold leading-none truncate">5</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M9 10v10" /><path d="M15 10v10" /><path d="M8 20h8" /><path d="M9 22h6" /><path d="M9 20v2" /><path d="M15 20v2" /><path d="M9 10c0-4 3-8 3-8s3 4 3 8" /><path d="M8 10h8" />
-                                    </svg>
+                                    <div id="preview-reward-icon" class="flex items-center justify-center">
+                                        <!-- Icône SVG injectée dynamiquement via JS -->
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M9 10v10" /><path d="M15 10v10" /><path d="M8 20h8" /><path d="M9 22h6" /><path d="M9 20v2" /><path d="M15 20v2" /><path d="M9 10c0-4 3-8 3-8s3 4 3 8" /><path d="M8 10h8" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -512,9 +524,7 @@
 
             } else if (mode === 'aventure') {
                 iconContainer.classList.add('hidden-mode');
-                updateAdventureColor(); 
-                labelPower.innerText = "POWER";
-                labelPrice.innerText = "RÉCOMPENSES";
+                updateAdventureType(); 
 
                 pName.innerText = document.getElementById('adv-name').value;
                 pDesc.innerText = document.getElementById('adv-desc').value;
@@ -530,6 +540,9 @@
                 pName.innerText = document.getElementById('perso-name').value;
                 pDesc.innerText = document.getElementById('perso-desc').value;
             }
+            
+            // Mise à jour de l'affichage de l'icône de récompense
+            updateRewardDisplay();
         }
 
         // === 3. Logique spécifique LOOT ===
@@ -575,11 +588,53 @@
         }
 
         // === 4. Logique spécifique Aventure ===
-        function updateAdventureColor() {
+        function updateAdventureType() {
             if (currentMode !== 'aventure') return;
             const select = document.getElementById('adv-type');
             const selectedOption = select.options[select.selectedIndex];
+            const typeValue = selectedOption.value;
+
+            // Couleur de fond
             document.getElementById('card-preview').style.backgroundColor = selectedOption.getAttribute('data-color');
+
+            const footer = document.getElementById('card-footer');
+            const inputs = document.getElementById('adv-stats-inputs');
+            const desc = document.getElementById('preview-desc');
+            const labelPower = document.getElementById('label-power');
+            const labelPrice = document.getElementById('label-price');
+
+            // Logique d'affichage selon le type d'aventure
+            if (typeValue === 'ENVIRONNEMENT') {
+                footer.classList.add('hidden-mode');
+                if (inputs) inputs.classList.add('hidden-mode');
+                desc.style.height = '14.75rem'; // Agrandit la description
+            } else {
+                footer.classList.remove('hidden-mode');
+                if (inputs) inputs.classList.remove('hidden-mode');
+                desc.style.height = '10rem'; // Restaure la taille standard
+                labelPower.innerText = "POWER NÉCESSAIRE";
+                labelPrice.innerText = "RÉCOMPENSES";
+            }
+        }
+
+        function updateRewardDisplay() {
+            const iconContainer = document.getElementById('preview-reward-icon');
+            const svgBastos = `<svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10v10" /><path d="M15 10v10" /><path d="M8 20h8" /><path d="M9 22h6" /><path d="M9 20v2" /><path d="M15 20v2" /><path d="M9 10c0-4 3-8 3-8s3 4 3 8" /><path d="M8 10h8" /></svg>`;
+            
+            if (currentMode === 'loot') {
+                // Les cartes de type Loot utilisent toujours la Bastos comme monnaie
+                iconContainer.innerHTML = svgBastos;
+            } else if (currentMode === 'aventure') {
+                const type = document.getElementById('adv-reward-type').value;
+                if (type === 'txt') {
+                    iconContainer.innerHTML = '';
+                } else if (type === 'loot') {
+                    iconContainer.innerHTML = `<i data-lucide="gift" class="w-7 h-7 opacity-90"></i>`;
+                    lucide.createIcons({ root: iconContainer });
+                } else if (type === 'bastos') {
+                    iconContainer.innerHTML = svgBastos;
+                }
+            }
         }
 
         // === 5. Listeners Inputs ===
@@ -678,6 +733,7 @@
                 document.getElementById('adv-type').selectedIndex = 0;
                 document.getElementById('adv-desc').value = "DESCRIPTIF DE L'AVENTURE";
                 document.getElementById('adv-power').value = "PUISSANCE";
+                document.getElementById('adv-reward-type').value = "txt";
                 document.getElementById('adv-price').value = "BUTIN";
             } else if (currentMode === 'personnage') {
                 document.getElementById('perso-name').value = "NOM DU PERSONNAGE";
